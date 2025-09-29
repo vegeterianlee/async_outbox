@@ -1,0 +1,80 @@
+version: "3.9"
+services:
+  web:
+    container_name: web
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - async-network
+
+  worker:
+    container_name: worker
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: celery -A app.celery_app.celery_app worker --loglevel=INFO -E
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+    depends_on:
+      - web
+      - redis
+    networks:
+      - async-network
+
+  beat:
+    container_name: beat
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: celery -A app.celery_app.celery_app beat --loglevel=INFO
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+    depends_on:
+      - worker
+      - redis
+    networks:
+      - async-network
+
+  redis:
+    container_name: redis
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - async-network
+
+  mysql:
+    container_name: mysql
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=async_outbox
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+    networks:
+      - async-network
+
+networks:
+  async-network:
