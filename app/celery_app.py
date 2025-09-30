@@ -14,6 +14,7 @@ celery_app.conf.update(
     timezone="UTC",
     enable_utc=True,
     imports=(
+        "app.tasks.report_tasks",
         "app.tasks.outbox_dispatcher",
         "app.celery_beat",
     ),

@@ -1,4 +1,5 @@
 import csv
+import json
 import os
 from datetime import datetime
 
@@ -7,25 +8,25 @@ from app.db.session import async_session_factory
 from app.db.worker_session import get_session
 from app.infrastructure.uow.sqlalchemy_uow import SqlAlchemyUnitOfWork
 from app.common.async_runner import run_in_single_loop
-
+from celery.utils.log import get_task_logger
+logger = get_task_logger(__name__)
 
 @celery_app.task(name="generate_report", bind=True)
 def generate_report(self, report_id: int, params: dict) -> str:
     """
     sleep 없이 에라토스테네스의 체를 이용해 소수를 계산하는 로직
     탐색 범위를 제곱근 이하로 설정할 수 있지만, 전체를 탐색하게 하여 시간 복잡도를 더 키웠음
-    - Updates Celery state periodically with PROGRESS.
+    - 주기적으로 Progress를 업데이트
     - CSV columns: input_n, prime_count.
     """
     try:
-        n = int(params.get("n", 5_000_000))  # choose a large default; tune per environment
+        # logger.info("params=%s", params)
+        n = int(params.get("input_number", 10_000_000))
     except Exception:
-        n = 5_000_000
-    if n < 100_000:
-        n = 100_000
+        n = 10_000_000
+    if n > 100_000_000:
+        n = 10_000_000
 
-    # Less-optimized sieve variant (counts divisors for every number)
-    # Numbers with exactly 2 divisors are primes.
     num_arr = [0] * (n + 1)
     step_report = max(1, n // 20)  # ~5% progress increments
     for i in range(1, n + 1):

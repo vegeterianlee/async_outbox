@@ -24,7 +24,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    command: celery -A app.celery_app.celery_app worker --loglevel=INFO -E
+    command: celery -A app.celery_app.celery_app worker --loglevel=INFO -E --autoscale 1,5
     volumes:
       - .:/app
     environment:

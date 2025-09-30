@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.uow import UnitOfWork
 from app.infrastructure.repositories.sqlalchemy_outbox_repository import SqlAlchemyOutboxRepository
 from app.infrastructure.repositories.sqlalchemy_report_repository import SqlAlchemyReportRepository
+from app.infrastructure.repositories.sqlalchemy_metrics_repository import SqlAlchemyReportMetricsRepository
 
 
 class SqlAlchemyUnitOfWork(UnitOfWork):
@@ -9,6 +10,7 @@ class SqlAlchemyUnitOfWork(UnitOfWork):
         self._session = session
         self.outbox = SqlAlchemyOutboxRepository(session)
         self.reports = SqlAlchemyReportRepository(session)
+        self.metrics = SqlAlchemyReportMetricsRepository(session)
 
     async def __aenter__(self) -> "SqlAlchemyUnitOfWork":
         return self

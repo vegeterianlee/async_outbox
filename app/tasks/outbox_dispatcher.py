@@ -1,10 +1,4 @@
-import logging
-import asyncio
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy.pool import NullPool
-
 from app.celery_app import celery_app
-from app.core.config import settings
 from app.db.worker_session import get_session
 from app.infrastructure.uow.sqlalchemy_uow import SqlAlchemyUnitOfWork
 from app.tasks.report_tasks import generate_report

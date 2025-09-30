@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from app.api.routes.reports import router as reports_router
+from app.api.routes.metrics import router as metrics_router
 from app.common.exceptions.exception_handler import global_exception_handler
 from app.core.config import settings
 from app.db.session import async_engine
@@ -25,6 +26,7 @@ def create_app() -> FastAPI:
         return api_response({"status": "ok", "environment": settings.ENVIRONMENT})
 
     app.include_router(reports_router, prefix="/reports", tags=["reports"])
+    app.include_router(metrics_router, prefix="/metrics", tags=["metrics"])
 
     # 전역 에러 핸들러 등록
     global_exception_handler(app)
