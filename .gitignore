@@ -1,0 +1,17 @@
+# 캐시 파일
+**/__pycache__/
+
+# 작업환경
+.vscode/
+**/.env*
+.env*
+.venv/
+
+# PyCharm과 같은 프로젝트 설정 파일 제외
+.idea/**
+
+# csv 파일
+app/data/*.csv
+
+# celerybeat 스케줄러 설정 파일
+celerybeat-schedule

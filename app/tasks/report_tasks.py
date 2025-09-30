@@ -4,7 +4,9 @@ from datetime import datetime
 
 from app.celery_app import celery_app
 from app.db.session import async_session_factory
+from app.db.worker_session import get_session
 from app.infrastructure.uow.sqlalchemy_uow import SqlAlchemyUnitOfWork
+from app.common.async_runner import run_in_single_loop
 
 
 @celery_app.task(name="generate_report", bind=True)
@@ -17,7 +19,7 @@ def generate_report(self, report_id: int, params: dict) -> str:
     """
     try:
         n = int(params.get("n", 5_000_000))  # choose a large default; tune per environment
-    except Exception:  # noqa: BLE001
+    except Exception:
         n = 5_000_000
     if n < 100_000:
         n = 100_000
@@ -34,14 +36,11 @@ def generate_report(self, report_id: int, params: dict) -> str:
             self.update_state(state="PROGRESS", meta={"progress": progress})
 
     prime_count = sum(1 for k in range(2, n + 1) if num_arr[k] == 2)
-
-    # Generate CSV and persist result path
-    import asyncio
-    return asyncio.run(_finalize_report_async(report_id, n, prime_count))
+    return run_in_single_loop(_finalize_report_async(report_id, n, prime_count))
 
 
 async def _finalize_report_async(report_id: int, n: int, prime_count: int) -> str:
-    # Write minimal CSV with input and answer
+    # input과 소수의 갯수만 prime_count로 저장하는 csv 반환
     os.makedirs("/app/data", exist_ok=True)
     file_path = f"/app/data/report_{report_id}_{int(datetime.utcnow().timestamp())}.csv"
 
@@ -50,8 +49,8 @@ async def _finalize_report_async(report_id: int, n: int, prime_count: int) -> st
         writer.writerow(["input_n", "prime_count"])
         writer.writerow([n, prime_count])
 
-    # persist result path
-    async with async_session_factory() as session:
+    # result path
+    async with get_session() as session:
         uow = SqlAlchemyUnitOfWork(session)
         await uow.reports.set_result(report_id, file_path)
         await uow.commit()

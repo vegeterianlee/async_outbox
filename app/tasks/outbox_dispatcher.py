@@ -1,21 +1,22 @@
 import logging
 import asyncio
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.pool import NullPool
 
 from app.celery_app import celery_app
-from app.db.session import async_session_factory
+from app.core.config import settings
+from app.db.worker_session import get_session
 from app.infrastructure.uow.sqlalchemy_uow import SqlAlchemyUnitOfWork
 from app.tasks.report_tasks import generate_report
-
-
-logger = logging.getLogger(__name__)
+from app.common.async_runner import run_in_single_loop
 
 @celery_app.task(name="dispatch_outbox_events")
 def dispatch_outbox_events() -> None:
-    asyncio.run(_dispatch_events_async())
+    run_in_single_loop(_dispatch_events_async())
 
 
 async def _dispatch_events_async() -> None:
-    async with async_session_factory() as session:
+    async with get_session() as session:
         uow = SqlAlchemyUnitOfWork(session)
         pending = await uow.outbox.list_pending(limit=100)
         for event in pending:
@@ -27,8 +28,8 @@ async def _dispatch_events_async() -> None:
                 await uow.commit()
 
             except Exception as e:
-                logger.exception("Failed to dispatch outbox event %s", event.id)
                 await uow.outbox.mark_failed(event.id, str(e))
                 await uow.commit()
+
 
 
