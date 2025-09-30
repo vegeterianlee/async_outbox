@@ -24,8 +24,11 @@ def generate_report(self, report_id: int, params: dict) -> str:
         n = int(params.get("input_number", 10_000_000))
     except Exception:
         n = 10_000_000
-    if n > 100_000_000:
-        n = 10_000_000
+    if n > 10**7:
+        n = 10**7
+
+    if n < 10**4:
+        n = 10**6
 
     num_arr = [0] * (n + 1)
     step_report = max(1, n // 20)  # ~5% progress increments

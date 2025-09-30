@@ -1,52 +1,67 @@
 version: "3.9"
-
 services:
   web:
     container_name: web
-    build: .
-    command: uvicorn main:app --host 0.0.0.0 --port 8000
-    volumes:
-      - .:/app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
     ports:
       - "8000:8000"
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
     depends_on:
-      - mysql
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - async-network
 
   worker:
     container_name: worker
-    build: .
-    command: celery -A app.celery_app.celery_app worker --loglevel=INFO -E
-    volumes:
-      - .:/app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["celery","-A","app.celery_app.celery_app",
+              "worker","-E","--loglevel=INFO", "--concurrency=4", "--autoscale=4,5",
+              "--max-tasks-per-child=100","--max-memory-per-child=300000"]
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
     depends_on:
-      - web
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - async-network
 
   beat:
     container_name: beat
-    build: .
-    command: celery -A app.celery_app.celery_app beat --loglevel=INFO
-    volumes:
-      - .:/app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["celery","-A","app.celery_app.celery_app","beat","--loglevel=INFO"]
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
     depends_on:
-      - worker
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - async-network
 
   redis:
     container_name: redis
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    networks:
+      - async-network
 
   mysql:
     container_name: mysql
@@ -58,7 +73,11 @@ services:
       - "3306:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
+      interval: 10s
+      timeout: 5s
       retries: 10
+    networks:
+      - async-network
 
-
+networks:
+  async-network:
