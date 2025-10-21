@@ -32,7 +32,7 @@ class RequestReportUseCase:
             report = await uow.reports.add(report)
 
             # Outbox event
-            # Dispatcher가 celery에 작업을 위임하고 job_id 설정해줌
+            # Dispatcher task가 celery에 작업을 위임하고 job_id 설정해줌
             event = OutboxEventEntity(
                 id=None,
                 aggregate_type="report",
