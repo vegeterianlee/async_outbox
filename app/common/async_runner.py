@@ -43,11 +43,10 @@ class _SingleEventLoop:
         if not (self._loop and self._loop.is_running()):
             raise RuntimeError("event loop not running after start")
 
-    def run(self, coro: Awaitable[R]) -> R:
+    def run(self, coro: Awaitable[R]):
         # 제출 전 반드시 대기
         self.init()
-        fut = asyncio.run_coroutine_threadsafe(coro, self._loop)
-        return fut.result()
+        asyncio.run_coroutine_threadsafe(coro, self._loop)
 
 single_loop = _SingleEventLoop()
 
