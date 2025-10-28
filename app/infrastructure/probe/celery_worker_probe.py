@@ -9,11 +9,26 @@ from app.celery_app import celery_app
 """
 
 # 워커별 작업 리스트 조회 로직 (동기)
+"""
+insp.active()
+{
+  "worker1@host": [
+      {"name": "dispatch_outbox_events", "id": "abc123", "args": "()", "kwargs": "{}"}
+  ],
+  "worker2@host": [
+      {"name": "generate_report", "id": "xyz456", "args": "()", "kwargs": "{}"},
+      {"name": "notify_user", "id": "hij789", "args": "()", "kwargs": "{}"}
+  ]
+}
+"""
+
 def _inspect_sync() -> tuple[int, int, int]:
     insp = celery_app.control.inspect(timeout=1.0)
-    active = insp.active() or {}
-    reserved = insp.reserved() or {}
-    scheduled = insp.scheduled() or {}
+    active = insp.active() or {} # 현재 실행중인 전체 task 목록
+    reserved = insp.reserved() or {} # 대기 중인 전체 task 목록
+    scheduled = insp.scheduled() or {} # 예약된 전체 task 목록
+
+    # 워커가 여러개가 있기에 여러 워커들에서의 합계를 구하고자 아래와 같이 설정
     worker_active = sum(len(v or []) for v in (active or {}).values())
     worker_reserved = sum(len(v or []) for v in (reserved or {}).values())
     worker_scheduled = sum(len(v or []) for v in (scheduled or {}).values())
